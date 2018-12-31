@@ -1,32 +1,35 @@
 #!/usr/bin/env python
+# IMPORTS
+import code
+import curses
+import time
+import sys
+import os
+import sqlcrush
+import argparse
+import logging
 
-## PyPy Support ##
+from sqlalchemy import *
+from sqlcrush import database
+from sqlcrush import user_input
+
+# PyPy Support
 import platform
 if platform.python_implementation() == "PyPy":
     from psycopg2cffi import compat
     compat.register()
 
-## IMPORTS ##
-import curses
-import time
-import sys
-import os
-from sqlalchemy import *
 
-import sqlcrush
-from sqlcrush import database
-from sqlcrush import user_input
-
-## GLOBALS ##
+# GLOBALS
 x = 1
 last_x = 0
 term_size_change = False
 option_window_open = False
 
-## FUNCTIONS ##
-#initialize the curses window and return scr
-def init_scr():
 
+# FUNCTIONS
+# initialize the curses window and return scr
+def init_scr():
     scr = curses.initscr()
 
     curses.noecho()
@@ -38,36 +41,30 @@ def init_scr():
 
     return scr
 
-#user scr to terminate the window and revert back to terminal
-def term_scr(scr):
 
+# user scr to terminate the window and revert back to terminal
+def term_scr(scr):
     curses.nocbreak()
     scr.keypad(False)
     curses.echo()
     curses.endwin()
 
-#returns the number of columns or rows
+# returns the number of columns or rows
 def get_scr_dim(scr):
     return scr.getmaxyx()
 
-#returns True if there has been a change in the window size, otherwise False
+# returns True if there has been a change in the window size, otherwise False
 def check_term_size_change(scr, scr_dim):
-
     change = False
-
     if scr_dim != scr.getmaxyx():
         change = True
-
     return change
 
 def open_top_bar(scr_dim):
-
     scr_top = curses.newwin(4, scr_dim[1], 0, 0)
-
     return scr_top
 
 def open_front_main(scr_dim):
-
     scr_front_main = curses.newwin(scr_dim[0]-4, scr_dim[1], 4, 0)
 
     if scr_dim[1] > 64:
@@ -107,44 +104,30 @@ def open_front_main(scr_dim):
         scr_front_main.addstr(14, 2, "[k] Query mode")
         scr_front_main.addstr(15, 2, "[q] Quit")
         scr_front_main.addstr(16, 2, "[s] Save database")
-
     scr_front_main.border(0)
-
     return scr_front_main
 
 def open_show_left(scr_dim):
-
     scr_show_left = curses.newwin(scr_dim[0]-4-3, 16, 4, 0)
-
     scr_show_left.border(0)
-
     return scr_show_left
 
 def open_show_main(scr_dim):
-
     scr_show_main = curses.newwin(scr_dim[0]-4-3, scr_dim[1]-16, 4, 16)
-
     scr_show_main.border(0)
-
     return scr_show_main
 
 def open_query_main(scr_dim):
-
     scr_query_main = curses.newwin(scr_dim[0]-4-3, scr_dim[1], 4, 0)
-
     scr_query_main.border(0)
-
     return scr_query_main
 
 def open_bottom_bar(scr_dim):
-
     scr_bottom = curses.newwin(3, scr_dim[1], scr_dim[0]-3, 0)
-
     return scr_bottom
 
 # refreshes each of the main windows
 def refresh_windows(current_screen, scr_top, scr_front_main, scr_show_left, scr_show_main, scr_bottom, scr_query_main):
-
     if current_screen == 1:
         scr_top.refresh()
         scr_front_main.refresh()
@@ -162,7 +145,6 @@ def refresh_windows(current_screen, scr_top, scr_front_main, scr_show_left, scr_
 
 # sets up .sqlcrush folder
 def create_environment():
-
     root_path = os.path.expanduser("~")
 
     if not os.path.exists(root_path + "/.sqlcrush"):
@@ -215,9 +197,23 @@ show_query = 0
 updatedData = 1                 # if 1, gets new database information
 
 # Based on what the user inputs
+# parser = argparse.ArgumentParser(description=__doc__)
+# parser.add_argument('-d', '--database',   metavar='database name', help='set database name')
+# parser.add_argument('-u', '--username',   metavar='user',          help='set username')
+# parser.add_argument('-P', '--password',   metavar='password',      help='set password')
+# parser.add_argument('-p', '--port',       metavar='port number',   help='set port number')
+# parser.add_argument('-t', '--type',       metavar='database type', help='set database type')
+# parser.add_argument('-s', '--socket',     metavar='socket',        help='set socket file (relevant to some mysql servers)')
+# parser.add_argument('-h', '--hostname',   metavar='hostname',      help='set hostname')
+# parser.add_argument('-o', '--open-saved', metavar='location',      help='open saved database')
+# parser.add_argument('-l', '--logfile',    metavar='location',      help='log messages to file')
+# parsed = parser.parse_args()
+logging.basicConfig(filename='kek.log', level=logging.DEBUG)
+
 if len(sys.argv) == 1:
     current_database = 0
     current_screen = 1
+
 elif len(sys.argv) >= 2:
     arguments = len(sys.argv)
     for n in range(arguments):
@@ -248,6 +244,7 @@ elif len(sys.argv) >= 2:
                 database_type = "postgresql"
             if database_type == "mariadb" or database_type == "maria":
                 database_type = "mysql"
+
 else:
     current_database = 0
     current_screen = 1
@@ -268,7 +265,7 @@ while n < 3:
             if saved_database != 0:
                 root_path = os.path.expanduser("~")
                 f = open(root_path + "/.sqlcrush/saved_databases", "r")
-            
+
                 saved_dbs = f.readlines()
                 f.close()
                 length_save_name = len(saved_database)
@@ -291,7 +288,7 @@ while n < 3:
         if n == 3:
             current_screen = 1
             current_database = 0
-#main loop
+# main loop
 while x != ord("q"):        # quit on [q]
     try:
         # check to see if there is a change in terminal size
@@ -318,7 +315,7 @@ while x != ord("q"):        # quit on [q]
             scr_top.addstr(1, 0, "No open database")
         else:
             scr_top.addstr(1, 0, str(database_type) + " - " + str(current_real_database))
-            
+
             # for each of the tables, adds up the number of executions
             execution_length = 0
             for table in table_executions:
@@ -365,7 +362,7 @@ while x != ord("q"):        # quit on [q]
                     else:
                         scr_show_main.addstr(0, 2+n*8, str(header))
                     n = n + 1
-                
+
                 # get the table MetaData from SQLalchemy
                 all_tables = MetaData()
                 all_tables.reflect(open_database)
@@ -677,7 +674,7 @@ while x != ord("q"):        # quit on [q]
                 # when a table hasn't been selected
                 elif open_window == 0:
                     scr_show_main.addstr(2, 3, "Press ENTER to view/edit")
-        
+
         # sets the open_list that is passed to some functions
         if open_window == 0 and current_screen == 2:
             open_list = shown_tables
@@ -716,6 +713,7 @@ while x != ord("q"):        # quit on [q]
                     p = p + 1
             elif query_state == 1:
                 new_user_query = database.new_user_query(scr_dim, scr_query_main, open_database)
+                log.debug('kek')
                 if new_user_query != "000":
                     try:
                         with open_database.connect() as conn:

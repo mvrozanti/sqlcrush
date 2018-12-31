@@ -8,9 +8,11 @@ import os
 import datetime
 from sqlalchemy import *
 from sqlalchemy.orm import *
-
+import code
+import logging
 from sqlcrush import user_input
 
+log = logging.getLogger()
 ## FUNCTIONS ##
 
 def print_intro():
@@ -37,6 +39,8 @@ def connect_database(n, current_real_database, dbname, user, host, password, por
     if saved_database == 0:
         if database_type == "mysql":
             sql_connect = str(database_type) + "+pymysql://"
+        elif database_type == "mssql":
+            sql_connect = str(database_type) + '+pymssql://'
         else:
             sql_connect = str(database_type) + "://"
         if user != 0:
@@ -52,9 +56,9 @@ def connect_database(n, current_real_database, dbname, user, host, password, por
         if socket != 0 and database_type == "mysql":
             sql_connect = sql_connect + "?unix_socket='" + socket + "'"
     else:
-        root_path = os.path.expanduser("~")
-        f = open(root_path + "/.sqlcrush/saved_databases", "r")
-        
+        home_path = os.path.expanduser("~")
+        f = open(home_path + "/.sqlcrush/saved_databases", "r")
+
         saved_dbs = f.readlines()
         f.close()
         length_save_name = len(saved_database)
@@ -70,14 +74,15 @@ def connect_database(n, current_real_database, dbname, user, host, password, por
         if database_dir != 0:
             os.chdir(database_dir)
         open_database = create_engine(sql_connect)
-    except:
+    except Exception as e:
+        log.exception(e)
         open_database = 0
 
     return open_database
 
 def save_database_to_file(dbname, user, host, password, port, database_type, scr_dim, scr_bottom):
 
-    root_path = os.path.expanduser("~")
+    home_path = os.path.expanduser("~")
 
     save_input = user_input.save_database_name(scr_dim, scr_bottom)
 
@@ -95,7 +100,7 @@ def save_database_to_file(dbname, user, host, password, port, database_type, scr
         current_dir = os.getcwd()
         database_save = database_save + " " + current_dir
 
-    with open(root_path + "/.sqlcrush/saved_databases", "a") as f:
+    with open(home_path + "/.sqlcrush/saved_databases", "a") as f:
         f.write(database_save)
 
 def get_table(table_name, open_database, database_dir):
@@ -133,7 +138,7 @@ def delete_database_entry(cursor_main, cursor_sub, columns, shown_tables, curren
     scr_bottom.refresh()
 
     time.sleep(1)
-    
+
     try:
         Session = sessionmaker(bind=open_database)
         conn = Session()
@@ -360,7 +365,7 @@ def new_entry(cursor_main, cursor_sub, table_executions, scr_dim, open_database,
         scr_bottom.addstr(1, 1, "New entry failed")
         scr_bottom.refresh()
         time.sleep(1)
-   
+
     return table_executions
 
 
@@ -417,12 +422,12 @@ def new_user_query(scr_dim, scr_query_main, open_database):
     return new_user_query
 
 def favourite_queries():
-    
-    root_path = os.path.expanduser("~")
+
+    home_path = os.path.expanduser("~")
 
     try:
-        f = open(root_path + "/.sqlcrush/favourite_queries", "r")
-        
+        f = open(home_path + "/.sqlcrush/favourite_queries", "r")
+
         fav_qs = f.readlines()
     except:
         fav_qs = []
@@ -431,9 +436,9 @@ def favourite_queries():
 
 def delete_fav_query(cursor):
 
-    root_path = os.path.expanduser("~")
+    home_path = os.path.expanduser("~")
 
-    f = open(root_path + "/.sqlcrush/favourite_queries", "r")
+    f = open(home_path + "/.sqlcrush/favourite_queries", "r")
     fav_queries = f.readlines()
     f.close()
     new_fav_queries = []
@@ -442,9 +447,9 @@ def delete_fav_query(cursor):
         if counter != cursor[0] + cursor[1]:
             new_fav_queries.append(line)
         counter = counter + 1
-    os.system("rm " + str(root_path) + "/.sqlcrush/favourite_queries")
+    os.system("rm " + str(home_path) + "/.sqlcrush/favourite_queries")
 
-    f = open(root_path + "/.sqlcrush/favourite_queries", "a+")
+    f = open(home_path + "/.sqlcrush/favourite_queries", "a+")
     for line in new_fav_queries:
         f.write(line.rstrip("\n"))
         f.write("\n")
@@ -453,16 +458,16 @@ def save_query(user_query):
 
     user_query = user_query + "\n"
 
-    root_path = os.path.expanduser("~")
+    home_path = os.path.expanduser("~")
 
-    with open(root_path + "/.sqlcrush/favourite_queries", "a+") as f:
+    with open(home_path + "/.sqlcrush/favourite_queries", "a+") as f:
         f.write(user_query)
 
 def run_user_query(cursor_main, open_database):
 
-    root_path = os.path.expanduser("~")
+    home_path = os.path.expanduser("~")
 
-    f = open(root_path + "/.sqlcrush/favourite_queries", "r")
+    f = open(home_path + "/.sqlcrush/favourite_queries", "r")
     fav_queries = f.readlines()
     f.close()
 
